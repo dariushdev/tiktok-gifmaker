@@ -1,0 +1,105 @@
+{% extends 'layout/layout.html.twig' %}
+    {% block content %}
+        <div class="container">
+            <div class="row justify-content-center mt-5">
+                <div class="col-md-12 col-lg-auto">
+                    <div class="video text-center">
+                        <video id="videoplayer" width="300" height="533" controls loop>
+                            <source src="user_videos/{{ filename }}.mp4" type=video/mp4>
+                        </video>
+                        <a href="user_videos/{{ filename }}.mp4" download class="btn btn-success mt-3 d-block">Download
+                            MP4</a>
+                    </div>
+                </div>
+                <div class="col-md-12 col-lg-auto">
+                    <div class="gif-config text-center mt-5">
+                        <label for="starttime" class="form-label d-block">Start Time:</label>
+                        <input type="range" class="form-range d-block w-100" id="videoRange" step="0.1"
+                               onchange="videoRangeChange(this.value)">
+                        <span class="badge bg-light text-dark" id="starttimetxt">0 sec</span>
+                        <label for="gifduration" class="form-label d-block">Gif Duration:</label>
+                        <input type="range" class="form-label d-block w-100" min=1 max=10 step="0.1" id="gifRange"
+                               value="1" onchange="gifDurationChange(this.value)">
+                        <span class="badge bg-light text-dark" id="gifdurationtxt">1 sec</span>
+                        <div class="buttons d-block">
+                            <button id="preview" class="btn btn-primary btn-lg d-inline-block mt-2" onclick="preview()">
+                                Preview
+                            </button>
+                            <button id="convert" class="btn btn-primary btn-lg d-inline-block mt-2" onclick="convert()">
+                                Convert GIF
+                            </button>
+                        </div>
+                        <div class="ads mt-5">
+                            {% include 'layout/ads.html.twig' %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12 col-lg-auto">
+                    <div id="loading" class="d-none text-center">
+                        <img src="/templates/assets/loading.gif" width="48" height="48">
+                    </div>
+                    <div id="result" class="text-center"></div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            var range = document.getElementById("videoRange");
+            var starttimetxt = document.getElementById("starttimetxt");
+            var gifdurationtxt = document.getElementById("gifdurationtxt");
+
+
+            getVideo().onloadedmetadata = function () {
+                range.min = 0;
+                range.max = getVideo().duration;
+                range.value = 0;
+            };
+
+            function getVideo() {
+                return document.getElementById("videoplayer");
+            }
+
+            function preview() {
+                let tempTime = parseFloat(getVideo().currentTime);
+                let gifDuration = parseFloat(document.getElementById("gifRange").value);
+                getVideo().play();
+                getVideo().ontimeupdate = function () {
+                    if (getVideo().currentTime > tempTime + gifDuration) {
+                        getVideo().pause();
+                        getVideo().currentTime = tempTime;
+                        tempTime = getVideo().duration;
+                    }
+                };
+            }
+
+            function videoRangeChange(val) {
+                starttimetxt.textContent = val + ' ' + 'sec';
+
+                return getVideo().currentTime = val
+            }
+
+            function gifDurationChange(val) {
+                gifdurationtxt.textContent = val + ' ' + 'sec';
+            }
+
+            function convert() {
+                let fromSeconds = document.getElementById("videoRange").value;
+                let gifDuration = document.getElementById("gifRange").value;
+                let videoId = "{{ filename }}";
+                $.ajax({
+                    type: "POST",
+                    url: '/convert',
+                    data: {fromSeconds: fromSeconds, gifDuration: gifDuration, videoId: videoId},
+                    beforeSend: function () {
+                        $('#loading').removeClass('d-none');
+                        $('#convert').addClass('disabled');
+                    },
+                    success: function (response) {
+                        $('#loading').addClass('d-none');
+                        $('#convert').removeClass('disabled');
+                        $("#result").empty().append(response);
+                    },
+                });
+            }
+        </script>
+    {% endblock %}
